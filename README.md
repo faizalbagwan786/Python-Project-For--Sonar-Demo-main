@@ -1,146 +1,89 @@
-# 3-Tier Python + PostgreSQL Application
+# CI/CD Pipeline with Jenkins & SonarQube
 
-This project is a 3-tier web application built using Python for the backend, with PostgreSQL as the database. The application consists of a presentation layer, a business logic layer, and a data access layer.
+Automated CI/CD pipeline that builds, tests, and scans a Python application for code quality on every Git push.
 
-## Table of Contents
+## What This Does
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  - [1. Setting Up Python Virtual Environment](#1-setting-up-python-virtual-environment)
-  - [2. Installing PostgreSQL](#2-installing-postgresql)
-  - [3. Setting Up PostgreSQL Database](#3-setting-up-postgresql-database)
-- [Running the Application](#running-the-application)
-- [License](#license)
+```
+GitHub Push → Webhook → Jenkins Pipeline → Run Tests → SonarQube Scan → Build Artifact
+```
 
-## Prerequisites
+Every time code is pushed to this repo, Jenkins automatically:
+1. Pulls the latest code
+2. Runs unit tests
+3. Sends the code to SonarQube for static analysis (bugs, code smells, security issues)
+4. Reports pass/fail status
 
-Before setting up the project, ensure you have the following installed on your machine:
+## Architecture
 
-- Ubuntu (or another compatible Linux distribution)
-- Python 3.12 or higher
-- PostgreSQL
+```
+┌──────────┐     webhook      ┌──────────────┐     scan      ┌─────────────┐
+│  GitHub   │ ──────────────→ │   Jenkins    │ ────────────→ │  SonarQube  │
+│   Repo    │                 │  (Pipeline)  │               │  (Scanner)  │
+└──────────┘                  └──────────────┘               └─────────────┘
+                                     │
+                                     ↓
+                              ┌──────────────┐
+                              │ Build Report │
+                              │  (Pass/Fail) │
+                              └──────────────┘
+```
 
-## Installation
+## Tech Stack
+- **Jenkins** — CI/CD automation server with Jenkinsfile pipeline
+- **SonarQube** — Static code analysis (code quality gate)
+- **Python** — Application being built and tested
+- **GitHub Webhooks** — Triggers pipeline on every push
 
-### 1. Setting Up Python Virtual Environment
+## Setup
 
-1. **Install the Python 3.12 virtual environment package:**
+### Prerequisites
+- Jenkins server running (I used Ubuntu VM)
+- SonarQube server running (separate Docker container or VM)
+- Git, Python 3 installed on Jenkins node
 
+### Steps
+
+1. **Start Jenkins & install plugins:**
    ```bash
-   sudo apt install python3.12-venv -y
+   # Jenkins should have these plugins installed:
+   # - Pipeline
+   # - Git
+   # - SonarQube Scanner
    ```
 
-2. **Create a virtual environment:**
+2. **Configure SonarQube in Jenkins:**
+   - Go to Jenkins → Manage Jenkins → Configure System
+   - Add SonarQube server URL and authentication token
 
-   ```bash
-   python3 -m venv myenv
-   ```
+3. **Set up GitHub webhook:**
+   - In your GitHub repo → Settings → Webhooks
+   - Payload URL: `http://<jenkins-ip>:8080/github-webhook/`
+   - Content type: `application/json`
 
-3. **Activate the virtual environment:**
+4. **Create Pipeline job:**
+   - New Item → Pipeline
+   - Point to this repo's `Jenkinsfile`
 
-   ```bash
-   source myenv/bin/activate
-   ```
+### Jenkinsfile Overview
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Checkout')    { /* Pull code from GitHub */ }
+        stage('Test')        { /* Run Python unit tests */ }
+        stage('SonarQube')   { /* Run code quality scan */ }
+        stage('Build')       { /* Package application */ }
+    }
+}
+```
 
-4. **Install required Python libraries from `requirements.txt`:**
+## What I Learned
+- How Jenkins pipelines work end-to-end (Jenkinsfile syntax, stages, agents)
+- Setting up GitHub webhooks for automatic build triggers
+- Integrating SonarQube for code quality gates
+- Debugging pipeline failures through Jenkins console output
+- Why CI/CD matters — catching bugs before they hit production
 
-   First, ensure `pip` is installed:
-
-   ```bash
-   sudo apt install python3-pip -y
-   ```
-
-   Then, install the required libraries:
-
-   ```bash
-   pip3 install -r requirements.txt
-   ```
-
-### 2. Installing PostgreSQL
-
-To install and set up PostgreSQL, follow these steps:
-
-1. **Install PostgreSQL and additional tools:**
-
-   ```bash
-   sudo apt-get install postgresql postgresql-contrib
-   ```
-
-2. **Start the PostgreSQL service:**
-
-   ```bash
-   sudo systemctl start postgresql
-   ```
-
-3. **Enable PostgreSQL to start on boot:**
-
-   ```bash
-   sudo systemctl enable postgresql
-   ```
-
-### 3. Setting Up PostgreSQL Database
-
-1. **Switch to the PostgreSQL user:**
-
-   ```bash
-   sudo -i -u postgres
-   ```
-
-2. **Create a new PostgreSQL user:**
-
-   ```sql
-   CREATE USER root WITH PASSWORD 'root';
-   ```
-
-3. **Create a new PostgreSQL database:**
-
-   ```sql
-   CREATE DATABASE my_database;
-   ```
-
-4. **Grant all privileges on the database to the new user:**
-
-   ```sql
-   GRANT ALL PRIVILEGES ON DATABASE my_database TO root;
-   ```
-
-5. **Connect to the new database:**
-
-   ```sql
-   \c my_database
-   ```
-
-6. **Grant all privileges on the public schema to the user:**
-
-   ```sql
-   GRANT ALL PRIVILEGES ON SCHEMA public TO root;
-   ```
-
-7. **Grant create privileges on the database to the user:**
-
-   ```sql
-   GRANT CREATE ON DATABASE my_database TO root;
-   ```
-
-## Running the Application
-
-Once the environment and database are set up, you can run the application with the following steps:
-
-1. **Ensure your virtual environment is activated:**
-
-   ```bash
-   source myenv/bin/activate
-   ```
-
-2. **Run the application:**
-
-   ```bash
-   python run.py
-   ```
-
-   The application will start, and you can access it via the specified host and port in your configuration.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
+## Author
+**Faizal Bagwan** — [LinkedIn](https://www.linkedin.com/in/faizalbagwan/) | [GitHub](https://github.com/faizalbagwan786/)
